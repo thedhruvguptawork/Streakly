@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
 import Sidebar from "./components/sidebar";
 import Dashboard from "./pages/dashboard";
 import Habits from "./pages/Habits";
 import Tasks from "./pages/Tasks";
-import "./styles/layout.css"
+import "./styles/layout.css";
 
-
+// -------- Helper --------
 function isSameDay(d1, d2) {
   return (
     d1.getFullYear() === d2.getFullYear() &&
@@ -15,17 +16,31 @@ function isSameDay(d1, d2) {
 }
 
 function App() {
-
-
-<h1>Add Tasks</h1>
-
+  // -------- Navigation --------
   const [currentPage, setCurrentPage] = useState("dashboard");
 
-  const [tasks, setTasks] = useState([]);
+  // -------- Tasks (LocalStorage) --------
+  const [tasks, setTasks] = useState(() => {
+    const saved = localStorage.getItem("tasks");
+    return saved ? JSON.parse(saved) : [];
+  });
 
-  const [habits, setHabits] = useState([]);
+  // -------- Habits (LocalStorage) --------
+  const [habits, setHabits] = useState(() => {
+    const saved = localStorage.getItem("habits");
+    return saved ? JSON.parse(saved) : [];
+  });
 
+  // -------- Persist to LocalStorage --------
+  useEffect(() => {
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+  }, [tasks]);
 
+  useEffect(() => {
+    localStorage.setItem("habits", JSON.stringify(habits));
+  }, [habits]);
+
+  // -------- Habit Logic --------
   function markHabitDone(id) {
     const today = new Date();
 
@@ -37,11 +52,9 @@ function App() {
           const last = new Date(habit.lastCompleted);
 
           // already done today
-          if (isSameDay(last, today)) {
-            return habit;
-          }
+          if (isSameDay(last, today)) return habit;
 
-          // yesterday done → continue streak
+          // yesterday → continue streak
           const yesterday = new Date();
           yesterday.setDate(today.getDate() - 1);
 
@@ -54,7 +67,7 @@ function App() {
           }
         }
 
-        // missed day OR first time
+        // first time OR missed day
         return {
           ...habit,
           streak: 1,
@@ -63,6 +76,7 @@ function App() {
       })
     );
   }
+
   function addHabit(title) {
     setHabits([
       ...habits,
@@ -76,30 +90,28 @@ function App() {
   }
 
   function deleteHabit(id) {
-    setHabits(habits.filter((habit) => habit.id !== id));
+    setHabits(habits.filter((h) => h.id !== id));
   }
 
-
-
-
+  // -------- Task Logic --------
   function addTask(title) {
     setTasks([
       ...tasks,
       {
         id: Date.now(),
-        title: title,
+        title,
         status: "pending",
       },
     ]);
   }
 
   function deleteTask(id) {
-    setTasks(tasks.filter(task => task.id !== id));
+    setTasks(tasks.filter((t) => t.id !== id));
   }
 
   function toggleStatus(id) {
     setTasks(
-      tasks.map(task =>
+      tasks.map((task) =>
         task.id === id
           ? { ...task, status: task.status === "done" ? "pending" : "done" }
           : task
@@ -107,19 +119,14 @@ function App() {
     );
   }
 
-
-
-
-
+  // -------- UI --------
   return (
     <div className="app">
-      <Sidebar
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
-      />
+      <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
 
       <div className="main">
         {currentPage === "dashboard" && <Dashboard tasks={tasks} />}
+
         {currentPage === "tasks" && (
           <Tasks
             tasks={tasks}
@@ -137,13 +144,6 @@ function App() {
             markDone={markHabitDone}
           />
         )}
-
-
-
-
-
-
-
       </div>
     </div>
   );
